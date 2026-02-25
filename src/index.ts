@@ -78,22 +78,41 @@ const createSpectralAnnotations = (ruleset: string, parsed: FileWithContent[], b
         .sort((a, b) => (a.start_line > b.start_line ? 1 : -1))
     )
   );
-const downloadFile = (url: string, outputPath: string) => {
-  const response = await fetch(url)
 
-  if (!response.ok) {
-    throw new Error(`Failed to download: ${response.statusText}`)
-  }
+type DownloadError =
+  | { type: 'NetworkError'; message: string }
+  | { type: 'WriteError'; message: string }
+  | { type: 'InvalidResponse'; status: number }
 
-  if (!response.body) {
-    throw new Error('No response body')
-  }
+export const downloadFile = (
+  url: string,
+  outputPath: string
+): TE.TaskEither<DownloadError, void> =>
+  pipe(
+    TE.tryCatch(
+      () => fetch(url),
+      (e) => ({ type: 'NetworkError', message: String(e) })
+    ),
+    TE.chain((response) =>
+      response.ok
+        ? TE.right(response)
+        : TE.left({ type: 'InvalidResponse', status: response.status })
+    ),
+    TE.chain((response) =>
+      TE.tryCatch(
+        async () => {
+          if (!response.body) {
+            throw new Error('Empty body')
+          }
 
-  const fileStream = createWriteStream(outputPath)
-  await pipeline(response.body as any, fileStream)
+          const fileStream = fs.createWriteStream(outputPath)
+          await pipeline(response.body as any, fileStream)
+        },
+        (e) => ({ type: 'WriteError', message: String(e) })
+      )
+    )
+  )
 
-  console.log('File downloaded to', outputPath)
-}
 const readFilesToAnalyze = (pattern: string, host_api: string | undefined, workingDir: string) => {
   if (host_api) {
     downloadFile(host_api, 'api_doc.json');
@@ -152,7 +171,7 @@ const program = pipe(
     TE.fromEither(getRepositoryInfoFromEvent(config.GITHUB_EVENT_PATH, config.INPUT_EVENT_NAME))
   ),
   TE.bind('octokit', ({ config }) => TE.fromEither(createOctokitInstance(config.INPUT_REPO_TOKEN))),
-  TE.bind('fileContents', ({ config }) => readFilesToAnalyze(config.INPUT_FILE_GLOB, config.GITHUB_WORKSPACE)),
+  TE.bind('fileContents', ({ config }) => readFilesToAnalyze(config.INPUT_FILE_GLOB, config.INPUT_HOST_API, config.GITHUB_WORKSPACE)),
   TE.bind('annotations', ({ fileContents, config }) =>
     createSpectralAnnotations(config.INPUT_SPECTRAL_RULESET, fileContents, config.GITHUB_WORKSPACE)
   ),
