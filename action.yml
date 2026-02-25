@@ -6,7 +6,7 @@ inputs:
     required: true
     description: The pattern describing the file paths to lint with Spectral
     default: '*.oas.{json,yml,yaml}'
-  api_host:
+  host_api:
     required: false
     description: Host of the api documentation
   spectral_ruleset:
