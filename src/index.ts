@@ -78,10 +78,29 @@ const createSpectralAnnotations = (ruleset: string, parsed: FileWithContent[], b
         .sort((a, b) => (a.start_line > b.start_line ? 1 : -1))
     )
   );
+const downloadFile = (url: string, outputPath: string) => {
+  const response = await fetch(url)
 
-const readFilesToAnalyze = (pattern: string, workingDir: string) => {
+  if (!response.ok) {
+    throw new Error(`Failed to download: ${response.statusText}`)
+  }
+
+  if (!response.body) {
+    throw new Error('No response body')
+  }
+
+  const fileStream = createWriteStream(outputPath)
+  await pipeline(response.body as any, fileStream)
+
+  console.log('File downloaded to', outputPath)
+}
+const readFilesToAnalyze = (pattern: string, host_api: string | undefined, workingDir: string) => {
+  if (host_api) {
+    downloadFile(host_api, 'api_doc.json');
+    pattern = 'api_doc.json';
+  }
   const path = join(workingDir, pattern);
-
+  
   const readFile = (file: string) => TE.tryCatch(() => fs.readFile(file, { encoding: 'utf8' }), E.toError);
 
   return pipe(
