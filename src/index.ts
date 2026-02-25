@@ -24,6 +24,7 @@ import * as D from 'io-ts/Decoder';
 import { pipe } from 'fp-ts/pipeable';
 import { identity } from 'lodash';
 import * as path from 'path';
+import { pipeline } from 'stream/promises'
 
 const CHECK_NAME = 'Spectral Lint';
 const traverseTask = array.traverse(T.task);
