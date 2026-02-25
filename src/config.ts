@@ -5,6 +5,7 @@ export const Config = D.type({
   INPUT_REPO_TOKEN: D.string,
   GITHUB_WORKSPACE: D.string,
   INPUT_FILE_GLOB: D.string,
+  INPUT_HOST_API: D.URI,
   INPUT_EVENT_NAME: D.string,
   INPUT_SPECTRAL_RULESET: D.string,
   GITHUB_SERVER_URL: D.string,
